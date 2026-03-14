@@ -1,8 +1,8 @@
 // Vocab Helper Extension for SillyTavern
 // 드래그로 단어/문장 선택 → 팝업 번역 + 단어장 저장
 
-import { saveSettingsDebounced } from '../../../../../public/script.js';
-import { extension_settings } from '../../../../../public/scripts/extensions.js';
+import { saveSettingsDebounced } from '../../../script.js';
+import { extension_settings } from '../../extensions.js';
 
 function getSTContext() {
     return window.SillyTavern?.getContext() || {};
@@ -244,6 +244,8 @@ let selectionTimer = null;
 let lastTouchEnd = 0;
 
 function handleSelectionChange() {
+    const active = document.activeElement;
+    if (active && (active.tagName === 'TEXTAREA' || active.tagName === 'INPUT')) return;
     clearTimeout(selectionTimer);
     selectionTimer = setTimeout(() => {
         const settings = getSettings();
@@ -585,7 +587,7 @@ jQuery(async () => {
     document.addEventListener('selectionchange', handleSelectionChange);
     $(document).on('mouseup', onMouseUp);
     $(document).on('touchend', onTouchEnd);
-    $(document).on('mousedown touchstart', function (e) {
+    $(document).on('mousedown', function (e) {
         if (!$(e.target).closest('#vh-popup').length && $popup.is(':visible')) {
             const sel = window.getSelection();
             if (!sel || sel.toString().trim() === '') hidePopup();
