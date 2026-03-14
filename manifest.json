@@ -1,0 +1,13 @@
+{
+    "display_name": "Chationary",
+    "loading_order": 10,
+    "requires": [],
+    "optional": [],
+    "js": "index.js",
+    "css": "style.css",
+    "author": "custom",
+    "version": "1.0.0",
+    "homePage": "https://github.com/soohorangyi/chationary",
+    "repository": "https://github.com/soohorangyi/chationary",
+    "auto_update": true
+}

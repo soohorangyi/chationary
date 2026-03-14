@@ -1,0 +1,368 @@
+/* ── Vocab Helper Extension Styles ── */
+
+/* ── 번역 팝업 ── */
+#vh-popup {
+    position: absolute;
+    z-index: 9999;
+    width: 320px;
+    max-width: 85vw;
+    background: var(--SmartThemeBlurTintColor, #1e1e2e);
+    border: 1px solid var(--SmartThemeBorderColor, #44475a);
+    border-radius: 10px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+    font-size: 0.88rem;
+    color: var(--SmartThemeBodyColor, #cdd6f4);
+    display: flex;
+    flex-direction: column;
+    animation: vh-fade-in 0.15s ease;
+}
+
+@keyframes vh-fade-in {
+    from { opacity: 0; transform: translateY(4px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+.vh-popup-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 12px;
+    background: rgba(137, 180, 250, 0.12);
+    border-bottom: 1px solid var(--SmartThemeBorderColor, #44475a);
+}
+
+.vh-selected-word {
+    font-weight: 700;
+    font-size: 0.92rem;
+    color: var(--SmartThemeQuoteColor, #89b4fa);
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 240px;
+}
+
+.vh-close-btn {
+    background: none;
+    border: none;
+    color: var(--SmartThemeBodyColor, #cdd6f4);
+    cursor: pointer;
+    font-size: 0.85rem;
+    opacity: 0.6;
+    padding: 0 2px;
+    flex-shrink: 0;
+}
+.vh-close-btn:hover { opacity: 1; }
+
+.vh-popup-body {
+    padding: 10px 12px;
+}
+
+.vh-loading {
+    color: var(--SmartThemeBodyColor, #cdd6f4);
+    opacity: 0.6;
+    font-style: italic;
+    font-size: 0.85rem;
+}
+
+.vh-translation {
+    font-size: 1rem;
+    font-weight: 600;
+    color: #a6e3a1;
+    margin-bottom: 6px;
+}
+
+.vh-explanation {
+    font-size: 0.82rem;
+    color: var(--SmartThemeBodyColor, #bac2de);
+    line-height: 1.6;
+    opacity: 0.85;
+    word-break: keep-all;
+    overflow-wrap: break-word;
+}
+
+.vh-popup-footer {
+    padding: 6px 12px 10px;
+    display: flex;
+    justify-content: flex-end;
+}
+
+.vh-save-btn {
+    background: rgba(137, 180, 250, 0.2);
+    border: 1px solid rgba(137, 180, 250, 0.4);
+    border-radius: 6px;
+    color: #89b4fa;
+    cursor: pointer;
+    font-size: 0.82rem;
+    padding: 4px 10px;
+    transition: background 0.2s;
+}
+.vh-save-btn:hover { background: rgba(137, 180, 250, 0.35); }
+
+.vh-saved-badge {
+    font-size: 0.82rem;
+    color: #a6e3a1;
+    opacity: 0.85;
+}
+
+/* ── 설정 패널 (확장 목록 내부) ── */
+#vh-settings-block {
+    padding: 4px 0;
+}
+
+.vh-settings-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+.vh-toggle-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    font-size: 0.9rem;
+}
+
+.vh-settings-count {
+    font-size: 0.78rem;
+    opacity: 0.5;
+}
+
+#vh-inline-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.vh-panel-search {
+    width: 100%;
+}
+
+#vh-search-input {
+    width: 100%;
+    box-sizing: border-box;
+}
+
+#vh-vocab-list {
+    max-height: 340px;
+    overflow-y: auto;
+    border: 1px solid var(--SmartThemeBorderColor, #44475a);
+    border-radius: 6px;
+}
+
+#vh-vocab-list::-webkit-scrollbar { width: 4px; }
+#vh-vocab-list::-webkit-scrollbar-track { background: transparent; }
+#vh-vocab-list::-webkit-scrollbar-thumb { background: rgba(137,180,250,0.3); border-radius: 4px; }
+
+.vh-empty {
+    text-align: center;
+    padding: 24px;
+    opacity: 0.45;
+    font-style: italic;
+    font-size: 0.85rem;
+}
+
+.vh-vocab-item {
+    padding: 10px 12px;
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+    transition: background 0.15s;
+}
+.vh-vocab-item:hover { background: rgba(255,255,255,0.04); }
+.vh-vocab-item:last-child { border-bottom: none; }
+
+.vh-vocab-item-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 3px;
+}
+
+.vh-vocab-word {
+    font-weight: 700;
+    color: #89b4fa;
+    font-size: 0.95rem;
+}
+
+.vh-vocab-item-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.vh-vocab-date {
+    font-size: 0.72rem;
+    opacity: 0.4;
+}
+
+.vh-delete-btn {
+    background: none !important;
+    border: none !important;
+    box-shadow: none !important;
+    cursor: pointer;
+    font-size: 0.8rem;
+    opacity: 0.35;
+    padding: 0 2px !important;
+    transition: opacity 0.15s;
+    min-width: unset !important;
+}
+.vh-delete-btn:hover { opacity: 1 !important; }
+
+.vh-vocab-translation {
+    font-size: 0.92rem;
+    color: #a6e3a1;
+    font-weight: 500;
+    margin-bottom: 3px;
+}
+
+.vh-vocab-explanation {
+    font-size: 0.8rem;
+    opacity: 0.7;
+    line-height: 1.45;
+    margin-bottom: 3px;
+}
+
+.vh-vocab-context {
+    font-size: 0.76rem;
+    opacity: 0.4;
+    font-style: italic;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.vh-panel-footer {
+    display: flex;
+    justify-content: flex-end;
+    padding-top: 6px;
+    flex-shrink: 0;
+}
+
+#vh-clear-all-btn {
+    white-space: nowrap;
+    padding: 4px 12px !important;
+    min-width: unset !important;
+    width: auto !important;
+}
+
+/* API 선택 행 */
+.vh-api-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+    font-size: 0.85rem;
+}
+.vh-api-row label {
+    white-space: nowrap;
+    opacity: 0.8;
+}
+#vh-api-select {
+    flex: 1;
+    font-size: 0.83rem;
+    padding: 3px 6px;
+}
+
+/* ── 단어장 모달 ── */
+#vh-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    z-index: 10000;
+    background: rgba(0,0,0,0.6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    animation: vh-fade-in 0.15s ease;
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    transform: none !important;
+}
+
+#vh-modal {
+    background: var(--SmartThemeBlurTintColor, #1e1e2e);
+    border: 1px solid var(--SmartThemeBorderColor, #44475a);
+    border-radius: 12px;
+    box-shadow: 0 16px 48px rgba(0,0,0,0.7);
+    width: min(480px, 92vw);
+    max-height: 80vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    color: var(--SmartThemeBodyColor, #cdd6f4);
+    font-size: 0.88rem;
+}
+
+.vh-modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 14px 16px;
+    background: rgba(137, 180, 250, 0.1);
+    border-bottom: 1px solid var(--SmartThemeBorderColor, #44475a);
+    font-weight: 700;
+    font-size: 1rem;
+    flex-shrink: 0;
+}
+
+.vh-modal-header-right {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+#vh-modal-count {
+    font-size: 0.78rem;
+    opacity: 0.5;
+    font-weight: 400;
+}
+
+.vh-modal-close {
+    background: none;
+    border: none;
+    color: var(--SmartThemeBodyColor, #cdd6f4);
+    cursor: pointer;
+    opacity: 0.6;
+    font-size: 1rem;
+    padding: 0;
+    line-height: 1;
+}
+.vh-modal-close:hover { opacity: 1; }
+
+.vh-modal-search {
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--SmartThemeBorderColor, #44475a);
+    flex-shrink: 0;
+}
+
+.vh-modal-search input {
+    width: 100%;
+    box-sizing: border-box;
+}
+
+#vh-modal-vocab-list {
+    flex: 1;
+    overflow-y: auto;
+}
+
+#vh-modal-vocab-list::-webkit-scrollbar { width: 4px; }
+#vh-modal-vocab-list::-webkit-scrollbar-thumb { background: rgba(137,180,250,0.3); border-radius: 4px; }
+
+.vh-modal-footer {
+    padding: 10px 14px;
+    border-top: 1px solid var(--SmartThemeBorderColor, #44475a);
+    display: flex;
+    justify-content: flex-end;
+    flex-shrink: 0;
+}
+
+.vh-modal-footer button {
+    white-space: nowrap;
+    width: auto !important;
+    min-width: unset !important;
+    padding: 4px 12px !important;
+}
