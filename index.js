@@ -326,7 +326,8 @@ function showPopup(text, rect) {
 
 function hidePopup() {
     $popup.hide();
-    window.getSelection()?.removeAllRanges();
+    const active = document.activeElement;
+    if (!active || (active.tagName !== 'TEXTAREA' && active.tagName !== 'INPUT')) window.getSelection()?.removeAllRanges();
 }
 
 // ── 번역 요청 ──────────────────────────────────────────────
