@@ -1,8 +1,8 @@
 // Vocab Helper Extension for SillyTavern
 // 드래그로 단어/문장 선택 → 팝업 번역 + 단어장 저장
 
-import { saveSettingsDebounced } from '../../../script.js';
-import { extension_settings } from '../../extensions.js';
+import { saveSettingsDebounced } from '../../../../script.js';
+import { extension_settings } from '../../../extensions.js';
 
 function getSTContext() {
     return window.SillyTavern?.getContext() || {};
