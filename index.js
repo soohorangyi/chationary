@@ -1,8 +1,8 @@
 // Vocab Helper Extension for SillyTavern
 // 드래그로 단어/문장 선택 → 팝업 번역 + 단어장 저장
 
-import { saveSettingsDebounced } from '../../../../script.js';
-import { extension_settings } from '../../../extensions.js';
+import { saveSettingsDebounced } from '../../../script.js';
+import { extension_settings } from '../../extensions.js';
 
 function getSTContext() {
     return window.SillyTavern?.getContext() || {};
@@ -326,8 +326,7 @@ function showPopup(text, rect) {
 
 function hidePopup() {
     $popup.hide();
-    const active = document.activeElement;
-    if (!active || (active.tagName !== 'TEXTAREA' && active.tagName !== 'INPUT')) window.getSelection()?.removeAllRanges();
+    window.getSelection()?.removeAllRanges();
 }
 
 // ── 번역 요청 ──────────────────────────────────────────────
@@ -335,14 +334,22 @@ async function fetchTranslation(text, context) {
     try {
         const safeText = text.replace(/`/g, "'").replace(/\\/g, '');
 
+        // 선택된 텍스트의 언어 감지
+        const langHint = /[\u3040-\u30ff\u3400-\u4dbf\u4e00-\u9fff]/.test(safeText) ? '일본어/중국어' :
+                         /[\uAC00-\uD7A3]/.test(safeText) ? '한국어' :
+                         /[\u0400-\u04FF]/.test(safeText) ? '러시아어/키릴 문자' : '해당 단어의 원어';
+
         const prompt = [
-            `아래 단어를 한국어 사전처럼 설명해줘. 반드시 아래 형식만 사용해.`,
+            `아래 단어 또는 표현의 언어를 정확히 식별하고, 한국어로 사전처럼 설명해줘.`,
+            `단어가 라틴 문자로 쓰였더라도 영어가 아닐 수 있으니 반드시 실제 언어(독일어, 프랑스어, 스페인어 등)를 먼저 파악해.`,
             `단어: ${safeText}`,
             ``,
+            `반드시 아래 형식만 사용해:`,
+            `언어: (실제 언어명)`,
             `뜻1: (품사) 한국어 뜻`,
             `뜻2: (품사) 한국어 뜻`,
             `뜻3: (품사) 한국어 뜻`,
-            `예문: 짧은 영어 예문`,
+            `예문: 해당 언어로 된 짧은 예문`,
             ``,
             `위 형식 외 다른 말 하지 마. 각 줄은 반드시 한 줄로 끝내.`,
         ].filter(Boolean).join('\n');
@@ -404,11 +411,13 @@ async function fetchTranslation(text, context) {
         if (!raw || !raw.trim()) throw new Error('빈 응답');
         console.log('[VocabHelper] raw:', raw);
 
-        // ── 파싱: 뜻1/2/3 + 예문 형식 ──
+        // ── 파싱: 언어 + 뜻1/2/3 + 예문 형식 ──
+        const langMatch = raw.match(/언어\s*[:：]\s*(.+)/);
         const m1 = raw.match(/뜻\s*1\s*[:：]\s*(.+)/);
         const m2 = raw.match(/뜻\s*2\s*[:：]\s*(.+)/);
         const m3 = raw.match(/뜻\s*3\s*[:：]\s*(.+)/);
         const ex = raw.match(/예문\s*[:：]\s*(.+)/);
+        const detectedLang = langMatch ? `[${langMatch[1].trim()}]` : '';
 
         let meanings = [m1, m2, m3].filter(Boolean).map((m, i) => `${i + 1}. ${m[1].trim()}`);
 
@@ -432,7 +441,7 @@ async function fetchTranslation(text, context) {
         if (meanings.length === 0) throw new Error('번역 결과 없음');
 
         const example = ex ? `예문: ${ex[1].trim()}` : '';
-        currentTranslation = text;
+        currentTranslation = detectedLang ? `${text} ${detectedLang}` : text;
         currentExplanation = [...meanings, example].filter(Boolean).join('\n');
 
         $popup.find('.vh-loading').hide();
