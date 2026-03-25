@@ -42,6 +42,7 @@ function createPopup() {
                 <div class="vh-loading">번역 중...</div>
                 <div class="vh-result" style="display:none;">
                     <div class="vh-translation"></div>
+                    <div class="vh-pronunciation" style="display:none;"></div>
                     <div class="vh-explanation"></div>
                 </div>
             </div>
@@ -143,7 +144,8 @@ function renderModalVocabList(filter = '') {
                         <button class="vh-delete-btn" data-index="${realIdx}" title="삭제">🗑</button>
                     </div>
                 </div>
-                <div class="vh-vocab-explanation">${escapeHtml(item.explanation || '').replace(/\n/g, '<br>')}</div>
+                ${item.pronunciation ? `<div class="vh-vocab-pronunciation">${escapeHtml(item.pronunciation)}</div>` : ''}
+            <div class="vh-vocab-explanation">${escapeHtml(item.explanation || '').replace(/\n/g, '<br>')}</div>
                 ${item.context ? `<div class="vh-vocab-context">"${escapeHtml(item.context)}"</div>` : ''}
             </div>
         `);
@@ -289,12 +291,14 @@ function onTouchEnd(e) {
 let currentWord = '';
 let currentTranslation = '';
 let currentExplanation = '';
+let currentPronunciation = '';
 let currentContext = '';
 
 function showPopup(text, rect) {
     currentWord = text;
     currentTranslation = '';
     currentExplanation = '';
+    currentPronunciation = '';
 
     const selection = window.getSelection();
     currentContext = selection?.anchorNode?.parentElement?.textContent?.trim().slice(0, 300) || '';
@@ -339,10 +343,11 @@ async function fetchTranslation(text, context) {
             `아래 단어를 한국어 사전처럼 설명해줘. 반드시 아래 형식만 사용해.`,
             `단어: ${safeText}`,
             ``,
+            `발음: IPA 발음기호 (예: /ˈwɜːrd/ 또는 해당 언어의 발음기호. 알 수 없으면 빈 칸)`,
             `뜻1: (품사) 한국어 뜻`,
             `뜻2: (품사) 한국어 뜻`,
             `뜻3: (품사) 한국어 뜻`,
-            `예문: 짧은 영어 예문`,
+            `예문: 짧은 예문`,
             ``,
             `위 형식 외 다른 말 하지 마. 각 줄은 반드시 한 줄로 끝내.`,
         ].filter(Boolean).join('\n');
@@ -404,11 +409,13 @@ async function fetchTranslation(text, context) {
         if (!raw || !raw.trim()) throw new Error('빈 응답');
         console.log('[VocabHelper] raw:', raw);
 
-        // ── 파싱: 뜻1/2/3 + 예문 형식 ──
+        // ── 파싱: 발음기호 + 뜻1/2/3 + 예문 형식 ──
+        const mp = raw.match(/발음\s*[:：]\s*(.+)/);
         const m1 = raw.match(/뜻\s*1\s*[:：]\s*(.+)/);
         const m2 = raw.match(/뜻\s*2\s*[:：]\s*(.+)/);
         const m3 = raw.match(/뜻\s*3\s*[:：]\s*(.+)/);
         const ex = raw.match(/예문\s*[:：]\s*(.+)/);
+        const pronunciation = mp ? mp[1].trim() : '';
 
         let meanings = [m1, m2, m3].filter(Boolean).map((m, i) => `${i + 1}. ${m[1].trim()}`);
 
@@ -433,10 +440,17 @@ async function fetchTranslation(text, context) {
 
         const example = ex ? `예문: ${ex[1].trim()}` : '';
         currentTranslation = text;
+        currentPronunciation = pronunciation;
         currentExplanation = [...meanings, example].filter(Boolean).join('\n');
 
         $popup.find('.vh-loading').hide();
         $popup.find('.vh-translation').text(currentTranslation);
+        // 발음기호: 있을 때만 표시
+        if (pronunciation) {
+            $popup.find('.vh-pronunciation').text(pronunciation).show();
+        } else {
+            $popup.find('.vh-pronunciation').hide();
+        }
         $popup.find('.vh-explanation').html(currentExplanation.replace(/\n/g, '<br>'));
         $popup.find('.vh-result').show();
 
@@ -474,6 +488,7 @@ function saveCurrentWord() {
     settings.vocab_list.unshift({
         word: currentWord,
         translation: currentTranslation,
+        pronunciation: currentPronunciation,
         explanation: currentExplanation,
         context: currentContext.slice(0, 150),
         date: new Date().toLocaleDateString('ko-KR'),
@@ -518,7 +533,8 @@ function renderVocabList(filter = '') {
                         <button class="vh-delete-btn" data-index="${realIdx}" title="삭제">🗑</button>
                     </div>
                 </div>
-                <div class="vh-vocab-explanation">${escapeHtml(item.explanation || '').replace(/\n/g, '<br>')}</div>
+                ${item.pronunciation ? `<div class="vh-vocab-pronunciation">${escapeHtml(item.pronunciation)}</div>` : ''}
+            <div class="vh-vocab-explanation">${escapeHtml(item.explanation || '').replace(/\n/g, '<br>')}</div>
                 ${item.context ? `<div class="vh-vocab-context">"${escapeHtml(item.context)}"</div>` : ''}
             </div>
         `);
