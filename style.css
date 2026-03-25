@@ -69,15 +69,6 @@
     font-size: 1rem;
     font-weight: 600;
     color: #a6e3a1;
-    margin-bottom: 2px;
-}
-
-.vh-pronunciation {
-    font-size: 0.82rem;
-    color: var(--SmartThemeQuoteColor, #89b4fa);
-    opacity: 0.8;
-    font-family: 'Noto Sans', 'Segoe UI', sans-serif;
-    letter-spacing: 0.03em;
     margin-bottom: 6px;
 }
 
@@ -222,15 +213,6 @@
     font-size: 0.92rem;
     color: #a6e3a1;
     font-weight: 500;
-    margin-bottom: 3px;
-}
-
-.vh-vocab-pronunciation {
-    font-size: 0.8rem;
-    color: var(--SmartThemeQuoteColor, #89b4fa);
-    opacity: 0.75;
-    font-family: 'Noto Sans', 'Segoe UI', sans-serif;
-    letter-spacing: 0.03em;
     margin-bottom: 3px;
 }
 
