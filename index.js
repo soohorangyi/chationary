@@ -36,6 +36,7 @@ function createPopup() {
         <div id="vh-popup" style="display:none;">
             <div class="vh-popup-header">
                 <span class="vh-selected-word"></span>
+                <span class="vh-pronunciation" style="display:none;"></span>
                 <button class="vh-close-btn" title="닫기">✕</button>
             </div>
             <div class="vh-popup-body">
@@ -137,7 +138,7 @@ function renderModalVocabList(filter = '') {
         const $item = $(`
             <div class="vh-vocab-item">
                 <div class="vh-vocab-item-header">
-                    <span class="vh-vocab-word">${escapeHtml(item.word)}</span>
+                    <span class="vh-vocab-word">${escapeHtml(item.word)}</span>${item.pronunciation ? `<span class="vh-vocab-pronunciation">${escapeHtml(item.pronunciation)}</span>` : ''}
                     <div class="vh-vocab-item-actions">
                         <span class="vh-vocab-date">${item.date}</span>
                         <button class="vh-delete-btn" data-index="${realIdx}" title="삭제">🗑</button>
@@ -290,11 +291,13 @@ let currentWord = '';
 let currentTranslation = '';
 let currentExplanation = '';
 let currentContext = '';
+let currentPronunciation = '';
 
 function showPopup(text, rect) {
     currentWord = text;
     currentTranslation = '';
     currentExplanation = '';
+    currentPronunciation = '';
 
     const selection = window.getSelection();
     currentContext = selection?.anchorNode?.parentElement?.textContent?.trim().slice(0, 300) || '';
@@ -304,6 +307,7 @@ function showPopup(text, rect) {
     $popup.find('.vh-result').hide();
     $popup.find('.vh-save-btn').hide();
     $popup.find('.vh-saved-badge').hide();
+    $popup.find('.vh-pronunciation').hide();
 
     const settings = getSettings();
     if (settings.vocab_list.some(v => v.word === text)) {
@@ -339,6 +343,7 @@ async function fetchTranslation(text, context) {
             `아래 단어를 한국어 사전처럼 설명해줘. 반드시 아래 형식만 사용해.`,
             `단어: ${safeText}`,
             ``,
+            `발음기호: IPA 발음기호 (예: /ˈæpl/)`,
             `뜻1: (품사) 한국어 뜻`,
             `뜻2: (품사) 한국어 뜻`,
             `뜻3: (품사) 한국어 뜻`,
@@ -404,11 +409,17 @@ async function fetchTranslation(text, context) {
         if (!raw || !raw.trim()) throw new Error('빈 응답');
         console.log('[VocabHelper] raw:', raw);
 
-        // ── 파싱: 뜻1/2/3 + 예문 형식 ──
+        // ── 파싱: 발음기호 + 뜻1/2/3 + 예문 형식 ──
+        const pron = raw.match(/발음기호\s*[:：]\s*(.+)/);
         const m1 = raw.match(/뜻\s*1\s*[:：]\s*(.+)/);
         const m2 = raw.match(/뜻\s*2\s*[:：]\s*(.+)/);
         const m3 = raw.match(/뜻\s*3\s*[:：]\s*(.+)/);
         const ex = raw.match(/예문\s*[:：]\s*(.+)/);
+
+        if (pron) {
+            currentPronunciation = pron[1].trim();
+            $popup.find('.vh-pronunciation').text(currentPronunciation).show();
+        }
 
         let meanings = [m1, m2, m3].filter(Boolean).map((m, i) => `${i + 1}. ${m[1].trim()}`);
 
@@ -473,6 +484,7 @@ function saveCurrentWord() {
 
     settings.vocab_list.unshift({
         word: currentWord,
+        pronunciation: currentPronunciation,
         translation: currentTranslation,
         explanation: currentExplanation,
         context: currentContext.slice(0, 150),
@@ -512,7 +524,7 @@ function renderVocabList(filter = '') {
         const $item = $(`
             <div class="vh-vocab-item">
                 <div class="vh-vocab-item-header">
-                    <span class="vh-vocab-word">${escapeHtml(item.word)}</span>
+                    <span class="vh-vocab-word">${escapeHtml(item.word)}</span>${item.pronunciation ? `<span class="vh-vocab-pronunciation">${escapeHtml(item.pronunciation)}</span>` : ''}
                     <div class="vh-vocab-item-actions">
                         <span class="vh-vocab-date">${item.date}</span>
                         <button class="vh-delete-btn" data-index="${realIdx}" title="삭제">🗑</button>
