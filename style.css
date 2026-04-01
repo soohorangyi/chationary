@@ -39,7 +39,17 @@
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-    max-width: 240px;
+    max-width: 180px;
+}
+
+.vh-pronunciation {
+    font-size: 0.8rem;
+    color: var(--SmartThemeBodyColor, #cdd6f4);
+    opacity: 0.55;
+    font-style: italic;
+    margin-left: 6px;
+    white-space: nowrap;
+    flex-shrink: 0;
 }
 
 .vh-close-btn {
@@ -183,6 +193,14 @@
     font-weight: 700;
     color: #89b4fa;
     font-size: 0.95rem;
+}
+
+.vh-vocab-pronunciation {
+    font-size: 0.78rem;
+    color: var(--SmartThemeBodyColor, #cdd6f4);
+    opacity: 0.5;
+    font-style: italic;
+    margin-left: 5px;
 }
 
 .vh-vocab-item-actions {
