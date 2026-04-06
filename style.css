@@ -489,13 +489,22 @@
 /* ── 언어 관리 다이얼로그 ── */
 #vh-add-lang-overlay {
     position: fixed;
-    inset: 0;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    transform: none !important;
     z-index: 10100;
     background: rgba(0,0,0,0.65);
     display: flex;
     align-items: center;
     justify-content: center;
     animation: vh-fade-in 0.15s ease;
+    box-sizing: border-box;
 }
 
 #vh-add-lang-dialog {
