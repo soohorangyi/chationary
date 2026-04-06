@@ -380,19 +380,32 @@ function openAddLangDialog() {
         }
     });
 
+    // fixed가 모바일에서 부모 transform에 영향받으므로
+    // body에 붙이고 스크롤 오프셋 포함한 절대 좌표로 강제 덮어쓰기
     $(document.body).append($dlg);
-    // 모바일에서 부모 transform 영향 차단 — 강제 중앙 고정
-    $dlg.css({
-        position: 'fixed',
-        top: '0',
-        left: '0',
-        right: '0',
-        bottom: '0',
-        width: '100%',
-        height: '100%',
-        margin: '0',
-        padding: '0',
-        transform: 'none',
+    function repositionDlg() {
+        const scrollTop = window.scrollY || document.documentElement.scrollTop || 0;
+        const scrollLeft = window.scrollX || document.documentElement.scrollLeft || 0;
+        $dlg.css({
+            position: 'absolute',
+            top: scrollTop + 'px',
+            left: scrollLeft + 'px',
+            width: window.innerWidth + 'px',
+            height: window.innerHeight + 'px',
+            margin: '0',
+            padding: '0',
+            transform: 'none',
+            boxSizing: 'border-box',
+        });
+    }
+    repositionDlg();
+    $(window).on('resize.vhdlg scroll.vhdlg', repositionDlg);
+
+    // 닫힐 때 이벤트 정리
+    const origClose = $dlg.find('#vh-add-lang-close');
+    origClose.on('click.cleanup', () => $(window).off('resize.vhdlg scroll.vhdlg'));
+    $dlg.on('click.cleanup', function(e) {
+        if ($(e.target).is('#vh-add-lang-overlay')) $(window).off('resize.vhdlg scroll.vhdlg');
     });
 }
 
