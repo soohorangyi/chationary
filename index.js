@@ -32,35 +32,43 @@ function getSettings() {
     const s = extension_settings[EXT_NAME];
     if (s.connection_profile === undefined) s.connection_profile = '';
     if (!s.languages) s.languages = DEFAULT_LANGS.map(l => ({ ...l }));
+
+    // ── 기존 단어 마이그레이션: lang 필드 없으면 자동 감지 ──
+    let migrated = false;
+    s.vocab_list.forEach(v => {
+        if (!v.lang) {
+            v.lang = _detectLangFromText(v.word, s.languages.map(l => l.id));
+            migrated = true;
+        }
+    });
+    if (migrated) saveSettingsDebounced();
+
     return s;
 }
 
 // ── 언어 자동 감지 ─────────────────────────────────────────
-function detectLanguage(text) {
-    const settings = getSettings();
-    const ids = settings.languages.map(l => l.id);
-
-    // 일본어: 히라가나·카타카나 포함
+function _detectLangFromText(text, availableIds) {
     if (/[\u3040-\u30ff]/.test(text)) {
-        return ids.includes('ja') ? 'ja' : 'other';
+        return availableIds.includes('ja') ? 'ja' : 'other';
     }
-    // 중국어: 한자만
     if (/^[\u4e00-\u9faf\s]+$/.test(text)) {
-        return ids.includes('zh') ? 'zh' : 'other';
+        return availableIds.includes('zh') ? 'zh' : 'other';
     }
-    // 키릴
     if (/[\u0400-\u04ff]/.test(text)) {
-        return ids.includes('ru') ? 'ru' : 'other';
+        return availableIds.includes('ru') ? 'ru' : 'other';
     }
-    // 아랍
     if (/[\u0600-\u06ff]/.test(text)) {
-        return ids.includes('ar') ? 'ar' : 'other';
+        return availableIds.includes('ar') ? 'ar' : 'other';
     }
-    // 라틴 계열 → 영어 탭
     if (/^[a-zA-ZÀ-ÿ\s\-'.]+$/.test(text)) {
-        return ids.includes('en') ? 'en' : 'other';
+        return availableIds.includes('en') ? 'en' : 'other';
     }
     return 'other';
+}
+
+function detectLanguage(text) {
+    const settings = getSettings();
+    return _detectLangFromText(text, settings.languages.map(l => l.id));
 }
 
 // ── 팝업 DOM ───────────────────────────────────────────────
@@ -373,6 +381,19 @@ function openAddLangDialog() {
     });
 
     $(document.body).append($dlg);
+    // 모바일에서 부모 transform 영향 차단 — 강제 중앙 고정
+    $dlg.css({
+        position: 'fixed',
+        top: '0',
+        left: '0',
+        right: '0',
+        bottom: '0',
+        width: '100%',
+        height: '100%',
+        margin: '0',
+        padding: '0',
+        transform: 'none',
+    });
 }
 
 function addLanguageTab(id, label) {
