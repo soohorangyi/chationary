@@ -12,9 +12,9 @@ const EXT_NAME = 'vocab-helper';
 
 // ── 기본 언어 탭 ───────────────────────────────────────────
 const DEFAULT_LANGS = [
-    { id: 'en',    label: '🇺🇸 영어',   removable: false },
-    { id: 'ja',    label: '🇯🇵 일본어',  removable: false },
-    { id: 'other', label: '🌐 기타',    removable: false },
+    { id: 'en',    label: '🇺🇸 영어' },
+    { id: 'ja',    label: '🇯🇵 일본어' },
+    { id: 'other', label: '🌐 기타' },
 ];
 
 // ── 기본 설정 ──────────────────────────────────────────────
@@ -37,7 +37,16 @@ function getSettings() {
     let migrated = false;
     s.vocab_list.forEach(v => {
         if (!v.lang) {
-            v.lang = _detectLangFromText(v.word, s.languages.map(l => l.id));
+            const detected = _detectLangFromText(v.word, s.languages.map(l => l.id));
+            v.lang = detected;
+            migrated = true;
+        }
+    });
+    // lang이 현재 존재하지 않는 탭을 가리키면 첫 번째 탭으로 이동
+    const langIds = s.languages.map(l => l.id);
+    s.vocab_list.forEach(v => {
+        if (!langIds.includes(v.lang)) {
+            v.lang = langIds[0] || 'other';
             migrated = true;
         }
     });
@@ -349,12 +358,10 @@ function openAddLangDialog() {
                 <div class="vh-lang-manage-row">
                     <span class="vh-lang-manage-name">${escapeHtml(l.label)}</span>
                     <span class="vh-lang-manage-cnt">${cnt}개</span>
-                    ${l.removable !== false
-                        ? `<button class="vh-lang-remove-btn menu_button" data-id="${l.id}">삭제</button>`
-                        : '<span class="vh-lang-manage-fixed">기본</span>'}
+                    <button class="vh-lang-remove-btn menu_button" data-id="${l.id}">삭제</button>
                 </div>
             `);
-            $row.find('.vh-lang-remove-btn').on('click', function() {
+            $row.find('.vh-lang-remove-btn').off('click').on('click', function() {
                 if (!confirm(`탭을 삭제하면 해당 단어들이 '기타'로 이동합니다. 계속할까요?`)) return;
                 removeLanguageTab($(this).data('id'));
                 refreshManageList();
@@ -412,7 +419,7 @@ function openAddLangDialog() {
 function addLanguageTab(id, label) {
     const settings = getSettings();
     if (settings.languages.find(l => l.id === id)) return;
-    settings.languages.push({ id, label, removable: true });
+    settings.languages.push({ id, label });
     saveSettingsDebounced();
     toastr.success(`"${label}" 탭 추가됨`);
 }
@@ -420,13 +427,15 @@ function addLanguageTab(id, label) {
 function removeLanguageTab(id) {
     const settings = getSettings();
     const lang = settings.languages.find(l => l.id === id);
-    if (!lang || lang.removable === false) return;
-    settings.vocab_list.forEach(v => { if (v.lang === id) v.lang = 'other'; });
-    settings.languages = settings.languages.filter(l => l.id !== id);
+    if (!lang) return;
+    const remaining = settings.languages.filter(l => l.id !== id);
+    const fallback = remaining.find(l => l.id === 'other')?.id || remaining[0]?.id || 'other';
+    settings.vocab_list.forEach(v => { if (v.lang === id) v.lang = fallback; });
+    settings.languages = remaining;
     if (modalActiveLang === id) modalActiveLang = 'all';
     if (panelActiveLang === id) panelActiveLang = 'all';
     saveSettingsDebounced();
-    toastr.info(`탭 삭제됨 (단어들은 기타로 이동)`);
+    toastr.info(`탭 삭제됨 (단어들은 '${fallback}' 탭으로 이동)`);
 }
 
 // ── 툴바 버튼 ─────────────────────────────────────────────
