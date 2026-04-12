@@ -23,6 +23,7 @@ const defaultSettings = {
     enabled: true,
     connection_profile: '',
     languages: DEFAULT_LANGS.map(l => ({ ...l })),
+    wrong_list: [],
 };
 
 function getSettings() {
@@ -444,7 +445,11 @@ function addToolbarButton() {
         <span>📖</span><span>단어장</span>
     </div>`);
     $btn.on('click', openVocabModal);
-    $('#extensionsMenu').append($btn);
+    const $quiz = $(`<div id="vh-quiz-toolbar-btn" class="list-group-item flex-container flexGap5" title="단어 시험">
+        <span>📝</span><span>단어 시험</span>
+    </div>`);
+    $quiz.on('click', openQuizModal);
+    $('#extensionsMenu').append($btn).append($quiz);
 }
 
 // ── 연결 프로필 ───────────────────────────────────────────
@@ -838,6 +843,402 @@ function renderVocabList(filter = '') {
     });
 }
 
+
+// ══════════════════════════════════════════════════════════
+// ── 퀴즈 모드 ─────────────────────────────────────────────
+// ══════════════════════════════════════════════════════════
+
+let $quizModal = null;
+
+const quiz = {
+    deck: [],
+    cursor: 0,
+    wrong: [],
+    mode: 'quiz',
+    phase: 'typing',
+    langFilter: 'all',
+};
+
+function createQuizModal() {
+    $quizModal = $(`
+        <div id="vh-quiz-overlay" style="display:none;">
+            <div id="vh-quiz-modal">
+                <div class="vh-quiz-header">
+                    <span id="vh-quiz-title">📝 단어 시험</span>
+                    <div class="vh-quiz-header-right">
+                        <span id="vh-quiz-progress"></span>
+                        <button class="vh-quiz-close">✕</button>
+                    </div>
+                </div>
+                <div id="vh-quiz-body"></div>
+            </div>
+        </div>
+    `);
+    $quizModal.find('.vh-quiz-close').on('click', closeQuizModal);
+    $quizModal.on('click', function(e) {
+        if ($(e.target).is('#vh-quiz-overlay')) closeQuizModal();
+    });
+    $(document.body).append($quizModal);
+    function reposQuiz() {
+        const st = window.scrollY || document.documentElement.scrollTop || 0;
+        const sl = window.scrollX || document.documentElement.scrollLeft || 0;
+        $quizModal.css({
+            position: 'absolute', top: st + 'px', left: sl + 'px',
+            width: window.innerWidth + 'px', height: window.innerHeight + 'px',
+            margin: '0', padding: '0', transform: 'none', boxSizing: 'border-box',
+        });
+    }
+    reposQuiz();
+    $(window).on('resize.vhquiz scroll.vhquiz', reposQuiz);
+}
+
+function openQuizModal() {
+    renderQuizStartScreen();
+    $quizModal.show();
+}
+
+function closeQuizModal() {
+    $quizModal.hide();
+}
+
+function renderQuizStartScreen() {
+    const settings = getSettings();
+    const $body = $('#vh-quiz-body');
+    $('#vh-quiz-title').text('📝 단어 시험');
+    $('#vh-quiz-progress').text('');
+
+    const langOptions = [
+        { id: 'all', label: '전체' },
+        ...settings.languages.map(l => ({ id: l.id, label: l.label })),
+    ].map(l => {
+        const cnt = l.id === 'all'
+            ? settings.vocab_list.length
+            : settings.vocab_list.filter(v => v.lang === l.id).length;
+        return `<option value="${l.id}">${l.label} (${cnt}개)</option>`;
+    }).join('');
+
+    const wrongCount = settings.wrong_list?.length || 0;
+
+    $body.html(buildStartHTML(langOptions, wrongCount));
+
+    $('#vh-quiz-lang-sel').val(quiz.langFilter);
+    $('#vh-quiz-lang-sel').on('change', function() { quiz.langFilter = $(this).val(); });
+    $('#vh-quiz-start-all').on('click', () => startQuiz('quiz'));
+    $('#vh-quiz-start-wrong').on('click', () => { if (wrongCount > 0) startQuiz('wrong'); });
+    $('#vh-quiz-wrongnote-btn').on('click', renderWrongNote);
+}
+
+function buildStartHTML(langOptions, wrongCount) {
+    return `
+        <div class="vh-quiz-start">
+            <div class="vh-quiz-start-section">
+                <div class="vh-quiz-label">대상 언어</div>
+                <select id="vh-quiz-lang-sel" class="text_pole">${langOptions}</select>
+            </div>
+            <div class="vh-quiz-start-section">
+                <div class="vh-quiz-label">시험 방식</div>
+                <div class="vh-quiz-mode-btns">
+                    <button class="vh-quiz-start-btn menu_button" id="vh-quiz-start-all">
+                        🎲 전체 시험
+                        <span class="vh-quiz-start-sub">단어 전체를 랜덤으로</span>
+                    </button>
+                    <button class="vh-quiz-start-btn menu_button ${wrongCount === 0 ? 'vh-quiz-btn-disabled' : ''}" id="vh-quiz-start-wrong" ${wrongCount === 0 ? 'disabled' : ''}>
+                        ❌ 오답 재시험
+                        <span class="vh-quiz-start-sub">${wrongCount}개 오답 단어만</span>
+                    </button>
+                </div>
+            </div>
+            ${wrongCount > 0 ? `<div class="vh-quiz-start-section">
+                <div class="vh-quiz-label">오답 노트</div>
+                <button class="menu_button" id="vh-quiz-wrongnote-btn">📋 오답 목록 보기</button>
+            </div>` : ''}
+        </div>
+    `;
+}
+
+function startQuiz(mode) {
+    const settings = getSettings();
+    quiz.mode = mode;
+    quiz.cursor = 0;
+    quiz.wrong = [];
+
+    let pool = mode === 'wrong'
+        ? (settings.wrong_list || [])
+        : settings.vocab_list;
+
+    if (quiz.langFilter !== 'all') {
+        pool = pool.filter(v => v.lang === quiz.langFilter);
+    }
+
+    if (pool.length < 1) {
+        toastr.warning('시험 볼 단어가 없습니다.');
+        return;
+    }
+
+    const shuffled = [...pool].sort(() => Math.random() - 0.5);
+    quiz.deck = shuffled.map(v => ({
+        ...v,
+        direction: Math.random() < 0.5 ? 'word2meaning' : 'meaning2word',
+    }));
+
+    renderQuizQuestion();
+}
+
+function renderQuizQuestion() {
+    if (quiz.cursor >= quiz.deck.length) {
+        renderQuizResult();
+        return;
+    }
+
+    const q = quiz.deck[quiz.cursor];
+    quiz.phase = 'typing';
+    const total = quiz.deck.length;
+    const cur = quiz.cursor + 1;
+
+    $('#vh-quiz-title').text(quiz.mode === 'wrong' ? '❌ 오답 재시험' : '📝 단어 시험');
+    $('#vh-quiz-progress').text(`${cur} / ${total}`);
+
+    let prompt, placeholder, answerHint;
+    if (q.direction === 'word2meaning') {
+        prompt = `<span class="vh-quiz-qword">${escapeHtml(q.word)}</span>${q.pronunciation ? `<span class="vh-quiz-pron">${escapeHtml(q.pronunciation)}</span>` : ''}`;
+        placeholder = '한국어 뜻을 입력하세요';
+        answerHint = q.explanation || '';
+    } else {
+        const firstMeaning = (q.explanation || '').split('\n')[0] || '';
+        prompt = `<span class="vh-quiz-qmeaning">${escapeHtml(firstMeaning)}</span>`;
+        placeholder = '영단어를 입력하세요';
+        answerHint = q.word;
+    }
+
+    $('#vh-quiz-body').html(`
+        <div class="vh-quiz-card">
+            <div class="vh-quiz-direction-badge">${q.direction === 'word2meaning' ? '단어 → 뜻' : '뜻 → 단어'}</div>
+            <div class="vh-quiz-prompt">${prompt}</div>
+            <div class="vh-quiz-input-area">
+                <input type="text" id="vh-quiz-input" class="text_pole vh-quiz-input" placeholder="${placeholder}" autocomplete="off" autocorrect="off" spellcheck="false">
+                <button class="menu_button vh-quiz-submit-btn" id="vh-quiz-submit">확인</button>
+            </div>
+            <div id="vh-quiz-feedback" class="vh-quiz-feedback" style="display:none;"></div>
+            <div class="vh-quiz-nav">
+                <button class="menu_button vh-quiz-skip-btn" id="vh-quiz-skip">건너뛰기</button>
+            </div>
+        </div>
+    `);
+
+    const $input = $('#vh-quiz-input');
+    $input.focus();
+
+    $('#vh-quiz-submit').on('click', () => submitTypingAnswer(q, answerHint));
+    $input.on('keydown', function(e) {
+        if (e.key === 'Enter') submitTypingAnswer(q, answerHint);
+    });
+    $('#vh-quiz-skip').on('click', () => {
+        recordWrong(q, '(건너뜀)');
+        showAnswerFeedback(q, answerHint, false, true);
+    });
+}
+
+function submitTypingAnswer(q, answerHint) {
+    const userInput = $('#vh-quiz-input').val().trim();
+    if (!userInput) return;
+    const correct = checkAnswer(userInput, q);
+    if (correct) {
+        showAnswerFeedback(q, answerHint, true, false);
+    } else {
+        renderChoicePhase(q, answerHint, userInput);
+    }
+}
+
+function checkAnswer(input, q) {
+    const normalize = s => s.toLowerCase().replace(/[^a-z0-9가-힣]/g, '').trim();
+    const inp = normalize(input);
+    if (q.direction === 'word2meaning') {
+        const lines = (q.explanation || '').split('\n');
+        return lines.some(line => {
+            const stripped = normalize(line.replace(/^\d+\.\s*(\(.*?\)\s*)?/, ''));
+            return stripped.length >= 2 && inp.length >= 2 && (stripped.includes(inp) || inp.includes(stripped.slice(0, Math.max(4, stripped.length - 2))));
+        });
+    } else {
+        return normalize(q.word) === inp;
+    }
+}
+
+function renderChoicePhase(q, answerHint, prevTyped) {
+    quiz.phase = 'choice';
+    const settings = getSettings();
+    const pool = settings.vocab_list.filter(v => v.word !== q.word);
+    const shufflePool = [...pool].sort(() => Math.random() - 0.5).slice(0, 3);
+
+    let choices;
+    if (q.direction === 'word2meaning') {
+        const correct = (q.explanation || '').split('\n')[0] || q.word;
+        choices = [
+            { text: correct, correct: true },
+            ...shufflePool.map(v => ({ text: (v.explanation || '').split('\n')[0] || v.word, correct: false })),
+        ];
+    } else {
+        choices = [
+            { text: q.word, correct: true },
+            ...shufflePool.map(v => ({ text: v.word, correct: false })),
+        ];
+    }
+    choices = choices.sort(() => Math.random() - 0.5);
+
+    $('.vh-quiz-input-area').hide();
+    $('#vh-quiz-skip').hide();
+
+    $('#vh-quiz-feedback').html(`
+        <div class="vh-quiz-choice-hint">❌ 틀렸어요! <span class="vh-quiz-typed">"${escapeHtml(prevTyped)}"</span><br>객관식으로 재도전해보세요</div>
+        <div class="vh-quiz-choices">
+            ${choices.map((c, i) => `
+                <button class="vh-quiz-choice-btn menu_button" data-correct="${c.correct}" data-idx="${i}">
+                    ${escapeHtml(c.text.length > 80 ? c.text.slice(0, 80) + '…' : c.text)}
+                </button>
+            `).join('')}
+        </div>
+    `).show();
+
+    $('#vh-quiz-feedback .vh-quiz-choice-btn').on('click', function() {
+        const isCorrect = $(this).data('correct') === true || $(this).data('correct') === 'true';
+        $('#vh-quiz-feedback .vh-quiz-choice-btn').each(function() {
+            const c = $(this).data('correct') === true || $(this).data('correct') === 'true';
+            $(this).addClass(c ? 'vh-quiz-choice-correct' : 'vh-quiz-choice-wrong').prop('disabled', true);
+        });
+        if (!isCorrect) recordWrong(q, prevTyped);
+        setTimeout(() => showAnswerFeedback(q, answerHint, isCorrect, false, true), 700);
+    });
+}
+
+function showAnswerFeedback(q, answerHint, correct, skipped, fromChoice = false) {
+    if (!correct && !skipped && !fromChoice) recordWrong(q, '');
+
+    const shortAnswer = q.direction === 'word2meaning'
+        ? (q.explanation || '').split('\n').slice(0, 2).join(' / ')
+        : q.word;
+
+    const resultHtml = correct
+        ? `<div class="vh-quiz-result-correct">✅ 정답!</div>`
+        : skipped
+            ? `<div class="vh-quiz-result-wrong">⏭ 건너뜀</div>`
+            : `<div class="vh-quiz-result-wrong">❌ 오답</div>`;
+
+    $('.vh-quiz-card').find('#vh-quiz-feedback').remove();
+    $('.vh-quiz-card').find('.vh-quiz-input-area').hide();
+    $('.vh-quiz-card').find('.vh-quiz-nav').hide();
+    $('.vh-quiz-card').append(`
+        <div class="vh-quiz-answer-reveal">
+            ${resultHtml}
+            <div class="vh-quiz-answer-label">정답</div>
+            <div class="vh-quiz-answer-text">${escapeHtml(shortAnswer)}</div>
+            <button class="menu_button vh-quiz-next-btn" id="vh-quiz-next">다음 →</button>
+        </div>
+    `);
+
+    $('#vh-quiz-next').on('click', () => {
+        quiz.cursor++;
+        renderQuizQuestion();
+    });
+}
+
+function recordWrong(q, userAnswer) {
+    if (quiz.wrong.find(w => w.word === q.word && w.direction === q.direction)) return;
+    quiz.wrong.push({ ...q, userAnswer });
+}
+
+function renderQuizResult() {
+    const total = quiz.deck.length;
+    const wrongCount = quiz.wrong.length;
+    const correct = total - wrongCount;
+    const pct = Math.round((correct / total) * 100);
+
+    const settings = getSettings();
+    if (!settings.wrong_list) settings.wrong_list = [];
+    quiz.wrong.forEach(w => {
+        if (!settings.wrong_list.find(x => x.word === w.word)) {
+            settings.wrong_list.unshift(w);
+        }
+    });
+    const correctWords = quiz.deck
+        .filter(q => !quiz.wrong.find(w => w.word === q.word))
+        .map(q => q.word);
+    settings.wrong_list = settings.wrong_list.filter(w => !correctWords.includes(w.word));
+    saveSettingsDebounced();
+
+    const emoji = pct === 100 ? '🏆' : pct >= 70 ? '🎉' : pct >= 40 ? '😅' : '😢';
+
+    $('#vh-quiz-title').text('결과');
+    $('#vh-quiz-progress').text('');
+    $('#vh-quiz-body').html(`
+        <div class="vh-quiz-result">
+            <div class="vh-quiz-result-emoji">${emoji}</div>
+            <div class="vh-quiz-result-score">${correct} / ${total}</div>
+            <div class="vh-quiz-result-pct">${pct}%</div>
+            <div class="vh-quiz-result-sub">${wrongCount > 0 ? `오답 ${wrongCount}개` : '전부 정답! 🎊'}</div>
+            <div class="vh-quiz-result-btns">
+                ${wrongCount > 0 ? `<button class="menu_button" id="vh-quiz-retry-wrong">❌ 오답만 재시험 (${wrongCount}개)</button>` : ''}
+                <button class="menu_button" id="vh-quiz-retry-all">🔄 전체 다시</button>
+                ${wrongCount > 0 ? `<button class="menu_button" id="vh-quiz-see-wrong">📋 오답 보기</button>` : ''}
+                <button class="menu_button" id="vh-quiz-back">← 처음으로</button>
+            </div>
+        </div>
+    `);
+
+    $('#vh-quiz-retry-wrong').on('click', () => startQuiz('wrong'));
+    $('#vh-quiz-retry-all').on('click', () => startQuiz('quiz'));
+    $('#vh-quiz-see-wrong').on('click', renderWrongNote);
+    $('#vh-quiz-back').on('click', renderQuizStartScreen);
+}
+
+function renderWrongNote() {
+    const settings = getSettings();
+    const list = settings.wrong_list || [];
+
+    $('#vh-quiz-title').text('📋 오답 노트');
+    $('#vh-quiz-progress').text(`${list.length}개`);
+
+    if (list.length === 0) {
+        $('#vh-quiz-body').html(`<div class="vh-empty" style="padding:40px 0;">오답이 없습니다 🎉</div>`);
+        return;
+    }
+
+    const items = list.map((w, i) => `
+        <div class="vh-wrong-item">
+            <div class="vh-wrong-item-header">
+                <span class="vh-vocab-word">${escapeHtml(w.word)}</span>
+                ${w.pronunciation ? `<span class="vh-vocab-pronunciation">${escapeHtml(w.pronunciation)}</span>` : ''}
+                <button class="vh-delete-btn vh-wrong-del-btn" data-idx="${i}" title="오답노트에서 제거">🗑</button>
+            </div>
+            <div class="vh-wrong-explanation">${escapeHtml((w.explanation || '').split('\n').slice(0, 2).join(' / '))}</div>
+        </div>
+    `).join('');
+
+    $('#vh-quiz-body').html(`
+        <div class="vh-wrong-note">
+            <div class="vh-wrong-list">${items}</div>
+            <div class="vh-wrong-note-footer">
+                <button class="menu_button" id="vh-wrong-start">❌ 오답 재시험</button>
+                <button class="menu_button" id="vh-wrong-clear">🗑 초기화</button>
+                <button class="menu_button" id="vh-wrong-back">← 돌아가기</button>
+            </div>
+        </div>
+    `);
+
+    $('.vh-wrong-del-btn').on('click', function() {
+        const idx = parseInt($(this).data('idx'));
+        settings.wrong_list.splice(idx, 1);
+        saveSettingsDebounced();
+        renderWrongNote();
+    });
+    $('#vh-wrong-start').on('click', () => startQuiz('wrong'));
+    $('#vh-wrong-clear').on('click', () => {
+        if (!confirm('오답 노트를 초기화할까요?')) return;
+        settings.wrong_list = [];
+        saveSettingsDebounced();
+        renderWrongNote();
+    });
+    $('#vh-wrong-back').on('click', renderQuizStartScreen);
+}
+
 // ── 유틸 ───────────────────────────────────────────────────
 function escapeHtml(str) {
     return String(str)
@@ -855,6 +1256,7 @@ jQuery(async () => {
 
     createPopup();
     createVocabModal();
+    createQuizModal();
     addToolbarButton();
 
     const settingsHtml = buildSettingsHTML();
