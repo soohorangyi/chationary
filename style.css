@@ -985,3 +985,46 @@
     white-space: nowrap !important;
     writing-mode: horizontal-tb !important;
 }
+
+/* 문제 수 선택 */
+.vh-quiz-count-row {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+.vh-quiz-count-btn {
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 6px;
+    color: var(--SmartThemeBodyColor, #cdd6f4);
+    cursor: pointer;
+    font-size: 0.82rem;
+    padding: 5px 12px;
+    transition: all 0.15s;
+    white-space: nowrap;
+}
+.vh-quiz-count-btn:hover {
+    background: rgba(137,180,250,0.15);
+    border-color: rgba(137,180,250,0.4);
+}
+.vh-quiz-count-active {
+    background: rgba(137,180,250,0.2) !important;
+    border-color: #89b4fa !important;
+    color: #89b4fa !important;
+    font-weight: 600;
+}
+.vh-quiz-count-custom-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 6px;
+}
+.vh-quiz-count-input {
+    width: 90px !important;
+    font-size: 0.85rem !important;
+    padding: 4px 8px !important;
+}
+.vh-quiz-count-unit {
+    font-size: 0.82rem;
+    opacity: 0.55;
+}
