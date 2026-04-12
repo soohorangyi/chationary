@@ -962,3 +962,26 @@
     font-size: 0.82rem !important;
     white-space: nowrap;
 }
+
+/* 단어장 모달 헤더 시험 버튼 */
+.vh-modal-quiz-btn {
+    background: rgba(137, 180, 250, 0.15);
+    border: 1px solid rgba(137, 180, 250, 0.35);
+    border-radius: 6px;
+    color: #89b4fa;
+    cursor: pointer;
+    font-size: 0.78rem;
+    padding: 3px 9px;
+    white-space: nowrap;
+    transition: background 0.15s;
+}
+.vh-modal-quiz-btn:hover { background: rgba(137, 180, 250, 0.28); }
+
+/* 오답노트 버튼 가로 고정 */
+.vh-quiz-wide-btn {
+    width: 100% !important;
+    text-align: left !important;
+    padding: 8px 14px !important;
+    white-space: nowrap !important;
+    writing-mode: horizontal-tb !important;
+}
