@@ -858,6 +858,7 @@ const quiz = {
     mode: 'quiz',
     phase: 'typing',
     langFilter: 'all',
+    limit: 0,           // 0 = 전체
 };
 
 function createQuizModal() {
@@ -924,6 +925,31 @@ function renderQuizStartScreen() {
 
     $('#vh-quiz-lang-sel').val(quiz.langFilter);
     $('#vh-quiz-lang-sel').on('change', function() { quiz.langFilter = $(this).val(); });
+
+    // 문제 수 버튼
+    function updateCountButtons(val) {
+        quiz.limit = val;
+        $('.vh-quiz-count-btn').removeClass('vh-quiz-count-active');
+        $(`.vh-quiz-count-btn[data-val="${val}"]`).addClass('vh-quiz-count-active');
+        if (val === 0) {
+            $('#vh-quiz-count-input').val('');
+        } else {
+            $('#vh-quiz-count-input').val(val);
+        }
+    }
+    // 초기 상태 반영
+    updateCountButtons(quiz.limit);
+
+    $('.vh-quiz-count-btn').on('click', function() {
+        updateCountButtons(parseInt($(this).data('val')));
+    });
+    $('#vh-quiz-count-input').on('input', function() {
+        const v = parseInt($(this).val());
+        quiz.limit = (!v || v < 1) ? 0 : v;
+        $('.vh-quiz-count-btn').removeClass('vh-quiz-count-active');
+        if (!v || v < 1) $(`.vh-quiz-count-btn[data-val="0"]`).addClass('vh-quiz-count-active');
+    });
+
     $('#vh-quiz-start-all').on('click', () => startQuiz('quiz'));
     $('#vh-quiz-start-wrong').on('click', () => { if (wrongCount > 0) startQuiz('wrong'); });
     $('#vh-quiz-wrongnote-btn').on('click', renderWrongNote);
@@ -935,6 +961,20 @@ function buildStartHTML(langOptions, wrongCount) {
             <div class="vh-quiz-start-section">
                 <div class="vh-quiz-label">대상 언어</div>
                 <select id="vh-quiz-lang-sel" class="text_pole">${langOptions}</select>
+            </div>
+            <div class="vh-quiz-start-section">
+                <div class="vh-quiz-label">문제 수</div>
+                <div class="vh-quiz-count-row">
+                    <button class="vh-quiz-count-btn" data-val="5">5개</button>
+                    <button class="vh-quiz-count-btn" data-val="10">10개</button>
+                    <button class="vh-quiz-count-btn" data-val="15">15개</button>
+                    <button class="vh-quiz-count-btn" data-val="20">20개</button>
+                    <button class="vh-quiz-count-btn ${quiz.limit === 0 ? 'vh-quiz-count-active' : ''}" data-val="0">전체</button>
+                </div>
+                <div class="vh-quiz-count-custom-row">
+                    <input type="number" id="vh-quiz-count-input" class="text_pole vh-quiz-count-input" min="1" max="999" placeholder="직접 입력">
+                    <span class="vh-quiz-count-unit">개</span>
+                </div>
             </div>
             <div class="vh-quiz-start-section">
                 <div class="vh-quiz-label">시험 방식</div>
@@ -977,7 +1017,8 @@ function startQuiz(mode) {
     }
 
     const shuffled = [...pool].sort(() => Math.random() - 0.5);
-    quiz.deck = shuffled.map(v => ({
+    const sliced = (quiz.limit > 0) ? shuffled.slice(0, quiz.limit) : shuffled;
+    quiz.deck = sliced.map(v => ({
         ...v,
         direction: Math.random() < 0.5 ? 'word2meaning' : 'meaning2word',
     }));
