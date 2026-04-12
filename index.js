@@ -136,6 +136,7 @@ function createVocabModal() {
                     <span>📖 내 단어장</span>
                     <div class="vh-modal-header-right">
                         <span id="vh-modal-count"></span>
+                        <button id="vh-modal-quiz-btn" class="vh-modal-quiz-btn" title="단어 시험">📝 시험</button>
                         <button class="vh-modal-close">✕</button>
                     </div>
                 </div>
@@ -151,6 +152,10 @@ function createVocabModal() {
         </div>
     `);
     $vocabModal.find('.vh-modal-close').on('click', closeVocabModal);
+    $vocabModal.find('#vh-modal-quiz-btn').on('click', () => {
+        closeVocabModal();
+        openQuizModal();
+    });
     $vocabModal.on('click', function(e) {
         if ($(e.target).is('#vh-modal-overlay')) closeVocabModal();
     });
@@ -445,11 +450,7 @@ function addToolbarButton() {
         <span>📖</span><span>단어장</span>
     </div>`);
     $btn.on('click', openVocabModal);
-    const $quiz = $(`<div id="vh-quiz-toolbar-btn" class="list-group-item flex-container flexGap5" title="단어 시험">
-        <span>📝</span><span>단어 시험</span>
-    </div>`);
-    $quiz.on('click', openQuizModal);
-    $('#extensionsMenu').append($btn).append($quiz);
+    $('#extensionsMenu').append($btn);
 }
 
 // ── 연결 프로필 ───────────────────────────────────────────
@@ -950,7 +951,7 @@ function buildStartHTML(langOptions, wrongCount) {
             </div>
             ${wrongCount > 0 ? `<div class="vh-quiz-start-section">
                 <div class="vh-quiz-label">오답 노트</div>
-                <button class="menu_button" id="vh-quiz-wrongnote-btn">📋 오답 목록 보기</button>
+                <button class="menu_button vh-quiz-wide-btn" id="vh-quiz-wrongnote-btn">📋 오답 목록 보기</button>
             </div>` : ''}
         </div>
     `;
